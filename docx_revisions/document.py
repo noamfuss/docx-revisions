@@ -125,10 +125,10 @@ class RevisionDocument:
 
         return total_count
 
-    def save(self, path: str | Path) -> None:
-        """Save the document to *path*.
+    def save(self, path_or_stream: str | Path | IO[bytes]) -> None:
+        """Save the document to a file path or file-like object.
 
         Args:
-            path: Destination file path.
+            path_or_stream: Destination file path or file-like object.
         """
-        self._document.save(str(path))
+        self._document.save(path_or_stream)
