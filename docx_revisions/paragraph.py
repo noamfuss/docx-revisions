@@ -24,9 +24,11 @@ from docx_revisions._helpers import (
     revision_attrs,
     splice_tracked_replace,
 )
+from docx_revisions._comment_helpers import comment_ids_in_paragraph
 from docx_revisions.revision import TrackedChange, TrackedDeletion, TrackedInsertion
 
 if TYPE_CHECKING:
+    from docx.comments import Comment
     from docx.styles.style import CharacterStyle
 
 IndexMode = Literal["text", "accepted", "original"]
@@ -143,6 +145,29 @@ class RevisionParagraph(Paragraph):
         Deletions are kept, insertions are removed.
         """
         return self._text_view(accept_changes=False)
+
+    @property
+    def comments(self) -> List[Comment]:
+        """List of ``Comment`` objects whose range starts in this paragraph.
+
+        Scans the paragraph XML for ``w:commentRangeStart`` markers and looks
+        up the corresponding comment definitions from the document's comments
+        part.
+
+        Returns:
+            A list of ``Comment`` objects (may be empty).
+        """
+        from docx.comments import Comment
+
+        cids = comment_ids_in_paragraph(self._p)
+        if not cids:
+            return []
+
+        comments = self.part.comments  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
+        return [
+            c for cid in cids
+            if (c := comments.get(cid)) is not None
+        ]
 
     # ------------------------------------------------------------------
     # Iteration

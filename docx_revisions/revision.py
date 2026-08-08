@@ -14,8 +14,11 @@ from typing import TYPE_CHECKING, Iterator, List
 from docx.oxml.ns import qn
 from docx.shared import Parented
 
+from docx_revisions._comment_helpers import element_within_comment_ranges
+
 if TYPE_CHECKING:
     import docx.types as t
+    from docx.comments import Comment
     from docx.table import Table
     from docx.text.paragraph import Paragraph
     from docx.text.run import Run
@@ -111,6 +114,32 @@ class TrackedChange(Parented):
         return [
             Run(r, self._parent)  # pyright: ignore[reportArgumentType]
             for r in self._element.r_lst
+        ]
+
+    @property
+    def comments(self) -> List[Comment]:
+        """List of ``Comment`` objects whose ranges annotate this tracked change.
+
+        Examines the paragraph for ``w:commentRangeStart`` / ``w:commentRangeEnd``
+        markers and returns any comments whose range overlaps this change.
+
+        Returns:
+            A list of ``Comment`` objects (may be empty if no ranges overlap).
+        """
+        from docx.comments import Comment
+
+        parent = self._element.getparent()
+        if parent is None:
+            return []
+
+        comment_ids = element_within_comment_ranges(self._element, parent)
+        if not comment_ids:
+            return []
+
+        comments = self._parent.part.comments  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
+        return [
+            c for cid in comment_ids
+            if (c := comments.get(cid)) is not None
         ]
 
     def accept(self) -> None:
